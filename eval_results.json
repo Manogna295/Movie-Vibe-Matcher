@@ -1,0 +1,26 @@
+{
+  "internship_report_findings": {
+    "contingency_matrix": {
+      "tp": 7,
+      "fp": 3,
+      "fn": 16,
+      "tn": 4774,
+      "total_corpus": 4800
+    },
+    "metrics": {
+      "accuracy": 0.996,
+      "precision_at_10": 0.7,
+      "recall_at_10": 0.3043,
+      "f1_at_10": 0.4242,
+      "tfidf_precision_at_10": 0.634,
+      "lsa_precision_at_10": 0.606,
+      "hybrid_gain_over_tfidf": "+6.6%",
+      "hybrid_gain_over_lsa": "+9.4%"
+    }
+  },
+  "movielens_tag_genome_validation": {
+    "mean_ndcg_at_10": 0.7754,
+    "mean_vibe_precision_at_10": 0.51,
+    "paired_movies_count": 3145
+  }
+}

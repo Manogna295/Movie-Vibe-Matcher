@@ -1,0 +1,21 @@
+# Local Python configuration
+pyrightconfig.json
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDE and Editor directories
+.vscode/
+.idea/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Large raw data files (exceeds GitHub 100MB limit)
+*.dat
+*.zip
+data/movielens/*.dat
+

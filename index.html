@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vibe Matcher — Content-Based Movie Recommender</title>
+  <meta name="description"
+    content="Discover movies by mood, atmosphere, and narrative feel. Powered by offline TF-IDF and LSA (TruncatedSVD) in pure client-side JavaScript.">
+
+  <!-- Google Fonts: Instrument Serif & Hanken Grotesk -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,300..800;1,300..800&family=Instrument+Serif:ital@0;1&display=swap"
+    rel="stylesheet">
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Precomputed movie data (window.VIBE) loaded synchronously to avoid file:// CORS issues -->
+  <script src="movies_data.js"></script>
+</head>
+
+<body>
+  <div class="page-container">
+    <!-- Header -->
+    <header class="site-header" role="banner">
+      <h1 class="site-title">Vibe Matcher</h1>
+      <p class="site-tagline">Type a mood, atmosphere, or narrative description to find matching films.</p>
+    </header>
+
+    <!-- Main Content Column -->
+    <main class="main-content" role="main">
+      <!-- Search Input Section -->
+      <section class="search-section" aria-label="Movie search">
+        <form id="search-form" class="search-form" role="search" onsubmit="return false;">
+          <label for="search-input" class="visually-hidden">Search for movie vibes</label>
+          <div class="input-wrapper">
+            <input type="text" id="search-input" name="q"
+              placeholder="e.g. slow-burn paranoid thriller, cozy autumn romance..." autocomplete="off"
+              spellcheck="false" aria-label="Describe a movie vibe">
+            <button type="button" id="clear-button" class="clear-button" aria-label="Clear input"
+              hidden>&times;</button>
+          </div>
+          <button type="submit" id="search-submit" class="submit-button">Search</button>
+        </form>
+
+        <!-- Related Words (Learned via LSA) -->
+        <div id="related-words-container" class="related-words-container" hidden>
+          <span class="related-label">Related words:</span>
+          <span id="related-words-list" class="related-words-list"></span>
+        </div>
+
+        <!-- Example Vibes -->
+        <div class="example-vibes" aria-label="Sample movie vibes">
+          <span class="example-label">Try:</span>
+          <ul class="example-list">
+            <li><button type="button" class="example-link" data-vibe="dark mind-bending thriller">dark mind-bending
+                thriller</button></li>
+            <li><button type="button" class="example-link" data-vibe="heist with a twist">heist with a twist</button>
+            </li>
+            <li><button type="button" class="example-link" data-vibe="mind-bending sci-fi">mind-bending sci-fi</button>
+            </li>
+            <li><button type="button" class="example-link" data-vibe="cozy rainy-day comedy">cozy rainy-day
+                comedy</button></li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Filter Section (Model & Genre) -->
+      <section class="filter-section" aria-label="Search options and filters">
+        <div class="filter-group">
+          <!-- Model Selection Switch -->
+          <div class="filter-wrapper">
+            <span class="filter-label">Model:</span>
+            <div id="mode-filters" class="mode-buttons" role="group" aria-label="Select recommendation model">
+              <button type="button" class="mode-btn" data-model="tfidf" aria-pressed="false">TF-IDF</button>
+              <button type="button" class="mode-btn" data-model="lsa" aria-pressed="false">LSA</button>
+              <button type="button" class="mode-btn active" data-model="hybrid" aria-pressed="true">Hybrid</button>
+            </div>
+          </div>
+
+          <!-- Dynamic Genre Filters -->
+          <div class="filter-wrapper">
+            <span class="filter-label">Genre:</span>
+            <div id="genre-filters" class="genre-buttons" role="group" aria-label="Filter movies by genre">
+              <!-- Injected dynamically by app.js -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Active Context Bar (for "More like this" mode) -->
+      <div id="context-banner" class="context-banner" hidden>
+        <span id="context-text" class="context-text"></span>
+        <button type="button" id="context-clear" class="context-clear">Return to text query</button>
+      </div>
+
+      <!-- Results Section -->
+      <section id="results-container" class="results-section" aria-live="polite" aria-atomic="true">
+        <!-- Result count or status summary -->
+        <div id="results-meta" class="results-meta" hidden>
+          <span id="results-count" class="results-count"></span>
+        </div>
+
+        <!-- Movie List -->
+        <ol id="results-list" class="results-list" role="list">
+          <!-- Populated dynamically by app.js -->
+        </ol>
+
+        <!-- Empty & Feedback States -->
+        <div id="empty-state" class="state-message">
+          <p class="state-headline">Enter any atmosphere or premise above.</p>
+          <p class="state-detail">Searches run directly in your browser across 4,800 films using TF-IDF vectorization,
+            latent semantic analysis (LSA), and hybrid scoring.</p>
+        </div>
+
+        <div id="no-results-state" class="state-message" hidden>
+          <p class="state-headline" id="no-results-headline">No matching films found.</p>
+          <p class="state-detail" id="no-results-detail">Try broadening your description or switching the genre filter.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer" role="contentinfo">
+      <p class="footer-line">Data: <a href="https://www.kaggle.com/datasets/tmdb/tmdb-movie-metadata" target="_blank"
+          rel="noopener noreferrer">TMDB 5000 Movie Dataset</a> (Kaggle) &amp; <a
+          href="https://grouplens.org/datasets/movielens/tag-genome/" target="_blank"
+          rel="noopener noreferrer">MovieLens Tag Genome</a> (GroupLens).</p>
+      <p class="footer-line">Search runs entirely in your browser in client-side JavaScript. Zero backend, zero
+        tracking.</p>
+      <p class="footer-line"><a href="https://github.com/YOUR_USERNAME/movie-vibe-matcher" target="_blank"
+          rel="noopener noreferrer">View GitHub Repository</a>
+        <!-- REPLACE_WITH_YOUR_REPO_URL: Set your actual GitHub repository URL here --></p>
+    </footer>
+  </div>
+
+  <!-- Client-side Search Logic -->
+  <script src="app.js"></script>
+</body>
+
+</html>
