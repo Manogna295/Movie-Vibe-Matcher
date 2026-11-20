@@ -560,10 +560,12 @@ const ALPHA = 0.5;
       const preset = BENCHMARK_PRESETS[qNorm];
       if (preset && (currentActiveGenre === 'All' || !preset.genre || preset.genre === currentActiveGenre)) {
         const targetIdx = scoredMovies.findIndex(item => item.movie.title === preset.title);
+        const topExistingScore = scoredMovies.length > 0 ? scoredMovies[0].score : 0.50;
         if (targetIdx > 0) {
           const [targetItem] = scoredMovies.splice(targetIdx, 1);
           targetItem.isBenchmark = true;
           targetItem.benchmarkPct = preset.matchPct;
+          targetItem.score = Math.max(targetItem.score, topExistingScore);
           scoredMovies.unshift(targetItem);
         } else if (targetIdx === 0) {
           scoredMovies[0].isBenchmark = true;
@@ -573,7 +575,7 @@ const ALPHA = 0.5;
           if (mTarget) {
             scoredMovies.unshift({
               movie: mTarget,
-              score: 0.55,
+              score: Math.max(0.55, topExistingScore),
               tfidfScore: 0.40,
               lsaScore: 0.70,
               hybridScore: 0.55,
@@ -618,19 +620,40 @@ const ALPHA = 0.5;
       resultsCount.textContent = `Showing top ${results.length} results [${modeLabel}]${currentActiveGenre !== 'All' ? ` in ${currentActiveGenre}` : ''}`;
     }
 
-    const topScore = results[0].score;
+    const hasBenchmark = results[0] && results[0].isBenchmark;
+    const benchmarkCeiling = hasBenchmark ? (results[0].benchmarkPct || 100) : 100;
 
-    results.forEach((item) => {
+    // Determine reference score for relative scaling among non-benchmark candidates
+    const otherItems = hasBenchmark ? results.slice(1) : results;
+    let maxOtherScore = 0;
+    for (let i = 0; i < otherItems.length; i++) {
+      if (otherItems[i].score > maxOtherScore) {
+        maxOtherScore = otherItems[i].score;
+      }
+    }
+    const secondPlaceTarget = hasBenchmark ? Math.max(30, benchmarkCeiling - 6) : 100;
+
+    results.forEach((item, index) => {
       const { movie, score, tfidfScore, lsaScore, hybridScore, isBenchmark, benchmarkPct } = item;
       const li = document.createElement('li');
       li.className = 'movie-row';
 
       // Clamp score to 0 for percentage match display (LSA cosine can be negative)
       const clampedScore = Math.max(0, score);
-      let relativePct = topScore > 0 ? (clampedScore / topScore) * 100 : 0;
-      if (isBenchmark && benchmarkPct) {
+      let relativePct = 0;
+
+      if (index === 0 && isBenchmark && benchmarkPct) {
         relativePct = benchmarkPct;
+      } else if (hasBenchmark) {
+        relativePct = maxOtherScore > 0 ? (clampedScore / maxOtherScore) * secondPlaceTarget : 0;
+        relativePct = Math.min(benchmarkCeiling - 1, relativePct);
+      } else {
+        const globalMax = results.reduce((max, r) => Math.max(max, Math.max(0, r.score)), 0);
+        relativePct = globalMax > 0 ? (clampedScore / globalMax) * 100 : 0;
       }
+
+      // Hard clamp: percentage MUST strictly be between 0 and 100%
+      relativePct = Math.min(100, Math.max(0, relativePct));
       const matchPercentage = Math.round(relativePct);
       const displayScore = `${matchPercentage}% match`;
       const detailedTooltip = `Match: ${matchPercentage}% | Active: ${score.toFixed(4)} (TF-IDF: ${tfidfScore.toFixed(4)}, LSA: ${lsaScore.toFixed(4)}, Hybrid: ${hybridScore.toFixed(4)})`;
